@@ -6,6 +6,24 @@ const noteSet = () => ({
 		this.notes.push({ time, duration, noteCode, volume });
 	},
 	
+	scaleNotes(ratio) {
+		for(let note of this.notes) {
+			note.duration *= ratio;
+			note.time *= ratio;
+		}
+	},
+	
+	setStart(time) {
+		for(let note of this.notes) {
+			note.time += time;
+		}
+	},
+	
+	endTime() {
+		const lastNote = this.notes[this.notes.length - 1];
+		return lastNote.time + lastNote.duration;
+	},
+	
 	nextNoteTime() {
 		return this.notes[this.currIndex].time;
 	},

@@ -7,6 +7,7 @@ import examples from './examples.js';
 const codeArea = document.getElementById('input');
 const playBtn = document.getElementById('play');
 const infoPane = document.getElementById('info');
+const exampleDiv = document.getElementById('examples');
 
 const scheduleAheadTime = 0.1; // For reliable timing
 const startOffset = 0.1; // Time after hitting play before playback starts
@@ -22,7 +23,7 @@ let audioBuffers;
 
 function parse(code) {
 	// Parse into notes
-	const parsed = rmlParse(code, 0.3);
+	const parsed = rmlParse(code);
 	
 	// Display error if parsing failed
 	if(parsed.type == 'error') {
@@ -114,6 +115,13 @@ function setInfo(str) {
 	infoPane.innerText = str;
 }
 
+function makeExampleButton(name) {
+	const btn = document.createElement('button');
+	btn.innerText = 'Load ' + name;
+	exampleDiv.appendChild(btn);
+	return btn;
+}
+
 window.onload = function(){
 	// Initialize audio context
 	window.AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -150,6 +158,21 @@ window.onload = function(){
 	
 	document.getElementById('reset').onclick = () => { resetPiece(); };
 	
-	// Set initial example
-	codeArea.innerText = examples.beatrix;
+	// Allow saving code
+	let saved = '';	
+	const saveBtn = makeExampleButton('Saved').onclick = () => {
+		codeArea.value = saved;
+		setInfo('Loaded code.');
+	};
+	
+	// Add example load buttons
+	for(let [name, exampleText] of Object.entries(examples)) {
+		makeExampleButton(name).onclick = () => {
+			saved = codeArea.value;
+			codeArea.value = exampleText;
+			setInfo('Saved code.');
+		};
+	}
+	
+	codeArea.value = examples.Polyrhythms;
 };
