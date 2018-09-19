@@ -1,24 +1,32 @@
 .controls {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
-	grid-template-rows: repeat(4, auto);
+	grid-template-rows: repeat(5, auto);
+	grid-gap: 4px;
 }
 
- .input {
-	 grid-column: 1 / -1;
-	 height: 40ch;
- }
+.input {
+	grid-column: 1 / -1;
+	height: 40ch;
+}
  
 .control {
-	grid-row: -4 / -3;
+	grid-row: 2 / 3;
 }
 
 .info {
-	grid-row: -3 / -2;
+	grid-row: 3 / 4;
 	grid-column: 1 / -1;
 	border: solid 1px;
+	padding: 2px;
 }
 
 .examples {
-	grid-row: -2 / -1;
+	grid-row: 4 / 5;
+}
+
+.keyboard {
+	grid-row: 5 / 6;
+	grid-column: 1 / -1;
+	background: #EEE;
 }

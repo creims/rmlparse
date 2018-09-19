@@ -2,8 +2,8 @@ const noteSet = () => ({
 	currIndex: 0,
 	notes: [],
 	
-	addNote(time, duration, noteCode, volume = 1) {
-		this.notes.push({ time, duration, noteCode, volume });
+	addNote(time, schedDur, duration, noteCode, volume = 1) {
+		this.notes.push({ time, schedDur, duration, noteCode, volume });
 	},
 	
 	scaleNotes(ratio) {

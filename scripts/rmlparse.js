@@ -394,7 +394,7 @@ function schedule(lexed) {
 					// Schedule a note
 					case 'note':
 						const dur = calcDuration(noteDur, t.length);
-						set.addNote(time, Math.max(dur, noteDur * durMult), t.code + baseNote, volume);
+						set.addNote(time, noteDur, Math.max(dur, noteDur * durMult), t.code + baseNote, volume);
 						time += dur; // Schedule notes in sequence
 						break;
 					
@@ -409,7 +409,7 @@ function schedule(lexed) {
 						// Schedule notes in the chord
 						for(let n of t.notes) {
 							const dur = calcDuration(noteDur, n.length);
-							set.addNote(time, Math.max(dur, noteDur * durMult), n.code + baseNote, volume);
+							set.addNote(time, noteDur, Math.max(dur, noteDur * durMult), n.code + baseNote, volume);
 							if(dur < lowDur) {
 								lowDur = dur;
 							}
@@ -443,7 +443,13 @@ function schedule(lexed) {
 							case 'NOTELENGTH':
 								noteDur = parseFloat(t.value);
 								break;
+							case 'TEMPO':
+								noteDur = 60 / parseFloat(t.value);
+								break;
 							case 'RHYTHM':
+								if(t.value != 'ABSOLUTE' && t.value != 'RELATIVE') {
+									return error('Invalid rhythm: ' + t.value + ' . Use relative or absolute');
+								}
 								frag.rhythm = t.value;
 								break;
 							default:
@@ -462,7 +468,7 @@ function schedule(lexed) {
 		
 		// If the fragment uses relative rhythm, adjust note durations
 		// and times
-		if(frag.rhythm == 'relative') {
+		if(frag.rhythm != 'ABSOLUTE') {
 			// Final line is the floor for now
 			let floorDur = noteSets[noteSets.length - 1].endTime();
 			
@@ -490,7 +496,7 @@ function schedule(lexed) {
 		// Merge adjusted note sets into return array
 		Array.prototype.push.apply(adjustedNoteSets, noteSets);
 	}
-
+	
 	return adjustedNoteSets;
 }
 

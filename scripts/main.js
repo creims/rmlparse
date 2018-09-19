@@ -2,6 +2,7 @@ import noteSet from './noteset.js';
 import loadAudio from './loadaudio.js';
 import rmlParse from './rmlparse.js';
 import examples from './examples.js';
+import Keyboard from './keyboard.js';
 
 // Consts
 const codeArea = document.getElementById('input');
@@ -9,7 +10,7 @@ const playBtn = document.getElementById('play');
 const infoPane = document.getElementById('info');
 const exampleDiv = document.getElementById('examples');
 
-const scheduleAheadTime = 0.1; // For reliable timing
+const scheduleAheadTime = 0.15; // For reliable timing
 const startOffset = 0.1; // Time after hitting play before playback starts
 
 // Globals
@@ -20,7 +21,11 @@ let noteSets;
 let timer;
 let audioCtx;
 let audioBuffers;
+let keyboard;
+let scheduledNotes = [];
 
+// Parse RML into note sets and assign audio buffers
+// Returns true if the parse succeeds, false otherwise
 function parse(code) {
 	// Parse into notes
 	const parsed = rmlParse(code);
@@ -28,7 +33,7 @@ function parse(code) {
 	// Display error if parsing failed
 	if(parsed.type == 'error') {
 		setInfo(parsed.errMsg());
-		return;
+		return false;
 	} 
 	
 	setInfo('Parse succeeded!');
@@ -38,6 +43,8 @@ function parse(code) {
 	for(let s of noteSets) {
 		s.assignAudioBuffers(audioBuffers);
 	}
+	
+	return true;
 }
 
 // Schedule a particular note
@@ -55,9 +62,15 @@ function scheduleNote(n) {
 	}
 	
 	const adjustedTime = startTime + n.time;
-	
 	node.start(adjustedTime);
 	node.stop(adjustedTime + n.duration);
+	
+	// Add to scheduled notes for visualization
+	scheduledNotes.push({
+		start: adjustedTime,
+		stop: adjustedTime + n.schedDur,
+		note: n.noteCode
+	});
 }
 
 function scheduleNotes() {
@@ -87,20 +100,71 @@ function resetPiece() {
 	timeElapsed = 0;
 	stopTimer();
 	playing = false;
+	scheduledNotes = [];
 	
 	for(let set of noteSets) {
 		set.reset();
 	}
 }
+
+// Update keyboard visualization
+function animate() {
+	if(playing || scheduledNotes.length > 0) {
+		let draw = false; // Only draw if needed
+		let endedNotes = []; // Notes done playing since last draw
+		let newNotes = []; // Notes that began playing since last draw
+		
+		// Update status of all scheduled notes
+		for(let i = 0; i < scheduledNotes.length; /* Increment conditionally later */) {
+			const n = scheduledNotes[i];
+			
+			// If the note has ended, remove the note from the schedule
+			if(n.stop < audioCtx.currentTime) {
+				scheduledNotes.splice(i, 1);
+				endedNotes.push(n.note);
+				draw = true;
+				continue;
+			}
+			
+			// If the note had not yet started playing last frame
+			if(n.start <= audioCtx.currentTime) {
+				newNotes.push(n.note);
+				draw = true;
+			}
+			
+			i++; // Increment i since we didn't remove an element from scheduledNotes
+		}
+		
+		// If things changed, redraw the keyboard
+		if(draw) {
+			// Order is important - a key IS supposed to be pressed if it is both
+			// newly ended and newly pressed
+			keyboard.keysUp(endedNotes);
+			keyboard.keysDown(newNotes);
+			keyboard.draw();
+		}
+		
+		// Loop since we're (probably) still playing
+		requestAnimationFrame(animate);
+	} else {
+		// No longer playing, clear notes and don't loop
+		keyboard.clearNotes();
+		keyboard.draw();
+	}
+}
+
 // Begin/resume playback
 function play() {
+	playing = true;
 	timer.postMessage('start');
 	startTime = audioCtx.currentTime - timeElapsed;
 	playBtn.textContent = 'Pause';
+	requestAnimationFrame(animate);
 }
 
 // Pause playback
 function pause() {
+	playing = false;
 	// Store the time passed in the track so we can resume properly
 	timeElapsed = audioCtx.currentTime - startTime;
 	stopTimer();
@@ -144,15 +208,25 @@ window.onload = function(){
 	timer = new Worker('scripts/worker.js');
 	timer.onmessage = () => { scheduleNotes(); };
 	
+	// Initialize visuals
+	keyboard = new Keyboard(document.getElementById('keyboard'));
+	
 	// Register document events
-	document.getElementById('parse').onclick = () => { parse(codeArea.value) };
+	document.getElementById('parse').onclick = () => {
+		if(playing) {
+			pause();
+		}
+		
+		if(parse(codeArea.value)) {
+			resetPiece();
+		}
+	};
 	
 	playBtn.onclick = () => {
-		playing = !playing;
 		if(playing) {
-			play();
-		} else {
 			pause();
+		} else {
+			play();
 		}
 	};
 	
@@ -174,5 +248,5 @@ window.onload = function(){
 		};
 	}
 	
-	codeArea.value = examples.Polyrhythms;
+	codeArea.value = examples.Beatrix;
 };
